@@ -21,31 +21,17 @@ assignments for all nodes.
 
 All cluster nodes use static IP addresses configured via cloud-init:
 
----
+| Node | IP Address | Hostname | Role | Resources |
+|---|---|---|---|---|
+| Server 1 | 192.168.178.240 | k3s-server-01 | Control Plane | 2 GB RAM, 2 cores, +20 GB disk |
+| Server 2 | 192.168.178.241 | k3s-server-02 | Control Plane (HA, planned) | 2 GB RAM, 2 cores, +20 GB disk |
+| Server 3 | 192.168.178.242 | k3s-server-03 | Control Plane (HA, planned) | 2 GB RAM, 2 cores, +20 GB disk |
+| Worker 1 | 192.168.178.243 | k3s-worker-01 | Worker | 3 GB RAM, 2 cores, +40 GB disk |
+| Worker 2 | 192.168.178.244 | k3s-worker-02 | Worker | 3 GB RAM, 2 cores, +40 GB disk |
+| Infra | 192.168.178.245 | infra-core-01 | Infrastructure | 2 GB RAM, 1 core, +20 GB disk |
 
-Node IP Address Hostname Role Resources
-
----
-
-Server 1 192.168.178.240 k3s-server-01 Control Plane 2GB RAM, 2 cores,
-+20GB disk
-
-Server 2 192.168.178.241 k3s-server-02 Control Plane 2GB RAM, 2 cores,
-+20GB disk
-
-Server 3 192.168.178.242 k3s-server-03 Control Plane 2GB RAM, 2 cores,
-+20GB disk
-
-Worker 1 192.168.178.243 k3s-worker-01 Worker 3GB RAM, 2 cores,
-+40GB disk
-
-Worker 2 192.168.178.244 k3s-worker-02 Worker 3GB RAM, 2 cores,
-+40GB disk
-
-Infra 192.168.178.245 infra-core-01 Infrastructure 2GB RAM, 1 core,
-+20GB disk
-
----
+The hostnames keep the `k3s-` prefix from the first version of the cluster, which used k3s.
+The cluster now runs upstream Kubernetes set up with kubeadm.
 
 ### Why Static IPs?
 
@@ -136,7 +122,7 @@ The network must support:
 Network tests can be automated with:
 
 ```bash
-./scripts/network/test-network.sh
+./scripts/tests/test-vms.sh
 ```
 
 The script verifies:
@@ -144,9 +130,6 @@ The script verifies:
 - ping connectivity
 - ssh access
 - hostname resolution
-- internet connectivity
-- dns resolution
-- firewall status
 
 ## Kubernetes Networking
 
@@ -154,19 +137,18 @@ The script verifies:
 
 The Kubernetes cluster uses a separate pod network.
 
-- **Pod Network**: 10.42.0.0/16 (k3s default)
-- **Service Network**: 10.43.0.0/16 (k3s default)
+- **Pod Network**: 10.244.0.0/16 (set with `kubeadm init --pod-network-cidr`)
+- **Service Network**: 10.96.0.0/12 (kubeadm default)
 
 ### CNI Plugin
 
-The cluster uses **Flannel** as its CNI plugin.
+The cluster uses **Calico** (v3.27) as its CNI plugin.
 
 Advantages:
 
-- Simple configuration
-- Reliable networking
-- Suitable for homelab environments
-- Default choice for k3s
+- Supports Kubernetes network policies
+- Widely used in production clusters
+- Works well with kubeadm
 
 ## Network Topology
 
@@ -198,7 +180,7 @@ Advantages:
 
 1.  Workers connect to control plane on port **6443**
 2.  Control plane connects to kubelets on port **10250**
-3.  Pod-to-pod traffic uses the **Flannel overlay network**
+3.  Pod-to-pod traffic uses the **Calico** pod network
 
 ### External → Cluster Communication
 
@@ -264,5 +246,5 @@ External access to services can happen via:
 ## References
 
 - Kubernetes Networking Concepts\
-- Flannel CNI Documentation\
+- Calico Documentation\
 - UFW Firewall Documentation
